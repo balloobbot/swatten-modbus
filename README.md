@@ -56,10 +56,12 @@ Sub-systems: `identity`, `clock`, `solar`, `grid`, `phases_component`,
 `power_factor`, `battery`, `energy`. Each is a `Component` that can also be
 refreshed on its own. `await inverter.clock.async_sync()` sets the device clock.
 
-**ASCII framing over TCP is not supported.** This library never constructs a
-connection, so framing is the caller's choice — but the register map here is only
-valid over RTU or TCP framing, and Modbus ASCII over TCP is not a configuration
-this library supports or was extracted for.
+**ASCII-over-TCP is not supported, under any circumstance.** This library never
+builds a connection — you hand it a `ModbusUnit`, so framing is entirely your
+choice — but it offers no connect helper that could take or forward
+`framer="ascii"`, and a unit built with ASCII framing over TCP is outside what
+this register map was extracted for and is not supported. Use `framer="socket"`
+(the modbus-connection default) or `framer="rtu"`.
 
 ## Where the register map comes from
 
