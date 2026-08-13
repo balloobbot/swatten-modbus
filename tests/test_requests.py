@@ -16,29 +16,36 @@ from swatten_modbus import SwattenInverter
 
 from .conftest import ascii_words
 
-MODBUS_MAX_READ = 125  # a single request can never ask for more
+BLOCK_SIZE = 100  # the plugin's block_size, and the components' max_span
 
 SETUP_READS = [
     ("input", 5809, 8),  # model type
     ("holding", 4085, 1),  # power factor probe
 ]
 
+# One block list per component, in poll order — a component is read on its own
+# so that one refused block cannot blank the rest. Nothing is pooled across
+# components any more, which costs one request: solar and the phases used to
+# share a block ("input", 4061, 14) because they are adjacent.
 POLL_READS_THREE_PHASE = [
     ("input", 4050, 6),  # clock
-    ("input", 4061, 14),  # PV strings + the three grid phases
-    ("input", 4081, 4),  # output and reactive power
-    ("input", 4198, 1),  # grid frequency
-    ("input", 5401, 1),  # measured power
-    ("input", 10002, 7),  # PV generation + consumption
-    ("input", 10020, 5),  # battery
-    ("input", 10036, 12),  # import and export energy
+    ("input", 4061, 8),  # solar: both PV strings, up to but not into 4069
+    ("input", 4069, 6),  # phases: L1/L2/L3 voltage and current
+    ("input", 4081, 4),  # grid: output and reactive power
+    ("input", 4198, 1),  # grid: frequency
+    ("input", 5401, 1),  # grid: measured power
     ("holding", 4085, 1),  # power factor
+    ("input", 10020, 5),  # battery
+    ("input", 10002, 7),  # energy: PV generation + consumption
+    ("input", 10036, 12),  # energy: import and export
 ]
 
 POLL_READS_SINGLE_PHASE = [
-    *POLL_READS_THREE_PHASE[:1],
-    ("input", 4061, 12),  # PV strings + one grid voltage and current
-    *POLL_READS_THREE_PHASE[2:],
+    *POLL_READS_THREE_PHASE[:2],
+    # One grid voltage and current, bridging the two registers that are the
+    # three-phase L2/L3 voltages — and stopping short of the L2/L3 currents.
+    ("input", 4069, 4),
+    *POLL_READS_THREE_PHASE[3:],
 ]
 
 
@@ -70,13 +77,13 @@ async def test_three_phase_poll(
     await inverter.async_setup()
     seen = len(seeded_unit.read_events)
 
-    await inverter.async_update()
+    report = await inverter.async_update()
 
     poll = blocks(seeded_unit, seen)
     assert poll == POLL_READS_THREE_PHASE
-    for component in inverter.polled_components:
-        covers(poll, component)
-    assert all(count <= MODBUS_MAX_READ for _, _, count in poll)
+    for name in report.updated:
+        covers(poll, getattr(inverter, name))
+    assert all(count <= BLOCK_SIZE for _, _, count in poll)
 
 
 async def test_single_phase_poll(seeded_unit: MockModbusUnit) -> None:
@@ -85,12 +92,12 @@ async def test_single_phase_poll(seeded_unit: MockModbusUnit) -> None:
     await inverter.async_setup()
     seen = len(seeded_unit.read_events)
 
-    await inverter.async_update()
+    report = await inverter.async_update()
 
     poll = blocks(seeded_unit, seen)
     assert poll == POLL_READS_SINGLE_PHASE
-    for component in inverter.polled_components:
-        covers(poll, component)
+    for name in report.updated:
+        covers(poll, getattr(inverter, name))
     # A single-phase model stops at the L1 registers: 4073 and 4074 are the
     # three-phase L2/L3 currents and are never asked for.
     assert not any(start <= 4073 < start + count for _, start, count in poll), (

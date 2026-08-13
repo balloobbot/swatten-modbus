@@ -52,6 +52,19 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
+A poll reads each sub-system independently, the way the integration reads its
+blocks: one slow or refused block does not take the rest of the poll with it.
+`async_update()` returns an `UpdateReport` — a failed sub-system keeps its
+previous values, does not notify its listeners, and is listed by attribute name
+with its error, while every other one refreshes and notifies once the whole
+poll is done. Only a dead link (`ModbusConnectionError`) raises:
+
+```python
+report = await inverter.async_update()
+for name, error in report.failed.items():
+    print(f"{name} kept its previous values: {error}")
+```
+
 Sub-systems: `identity`, `clock`, `solar`, `grid`, `phases_component`,
 `power_factor`, `battery`, `energy`. Each is a `Component` that can also be
 refreshed on its own. `await inverter.clock.async_sync()` sets the device clock.

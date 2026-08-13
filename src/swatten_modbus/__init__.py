@@ -22,7 +22,7 @@ is set through holding.
 
 from .battery import Battery
 from .clock import Clock
-from .component import SwattenComponent
+from .component import SwattenComponent, UpdateReport
 from .energy import Energy
 from .grid import Gen2Grid, Grid, GridSinglePhase, GridThreePhase, PowerFactor
 from .identity import Identity
@@ -46,5 +46,6 @@ __all__ = [
     "SwattenComponent",
     "SwattenInverter",
     "UnsupportedModelError",
+    "UpdateReport",
     "phases_for",
 ]
