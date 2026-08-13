@@ -14,7 +14,7 @@ from modbus_connection.model import Component
 
 from swatten_modbus import SwattenInverter
 
-from .conftest import ascii_words
+from .conftest import ascii_words, u16
 
 BLOCK_SIZE = 100  # the plugin's block_size, and the components' max_span
 
@@ -130,3 +130,40 @@ async def test_power_factor_is_optional(seeded_unit: MockModbusUnit) -> None:
     poll = blocks(seeded_unit, seen)
     assert all(space == "input" for space, _, _ in poll)
     assert inverter.battery.battery_soc == 87  # the rest of the poll is unaffected
+
+
+async def test_read_raw_covers_the_setup_only_identity(
+    inverter: SwattenInverter,
+) -> None:
+    """A dump an issue report can use needs identity, not just the poll."""
+    raw = await inverter.async_read_raw()
+
+    assert set(raw) == {"input", "holding"}
+    assert raw["input"][5809] == ascii_words("SiH8KTH", 8)[0]  # setup-only
+    assert raw["input"][4073] == 81  # phases: polled
+    assert raw["holding"][4085] == u16(-950)  # power factor: polled
+    assert list(raw["input"]) == sorted(raw["input"])
+
+
+async def test_read_raw_leaves_out_a_power_factor_the_unit_refuses(
+    seeded_unit: MockModbusUnit,
+) -> None:
+    """Setup drops the probe; the dump must not read it back in."""
+    seeded_unit.fail_read(4085, IllegalDataAddressError(), register_type="holding")
+    inverter = SwattenInverter(seeded_unit)
+    await inverter.async_setup()
+
+    raw = await inverter.async_read_raw()
+
+    assert "holding" not in raw
+    assert raw["input"][5809] == ascii_words("SiH8KTH", 8)[0]
+
+
+async def test_read_raw_follows_the_phase_count(seeded_unit: MockModbusUnit) -> None:
+    """A single-phase model has no L2/L3 currents to dump."""
+    seeded_unit.input[5809] = ascii_words("SiH5KSH", 8)
+    inverter = SwattenInverter(seeded_unit)
+
+    raw = await inverter.async_read_raw()
+
+    assert 4073 not in raw["input"]

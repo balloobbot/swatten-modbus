@@ -121,6 +121,25 @@ class SwattenInverter:
             fresh.notify()
         return UpdateReport(updated, failed)
 
+    async def async_read_raw(self) -> dict[str, dict[int, int | bool]]:
+        """Every register this device reads, undecoded — for diagnostics.
+
+        The identity registers come along: setup reads them once and no poll
+        asks for them again, and they are the first thing an issue report is
+        read for. A power factor this unit refused at setup stays out, the same
+        as it does in a poll. The first call sets the device up. A block the
+        device refuses raises, since there the error is the point.
+        """
+        if self._polled is None:
+            await self.async_setup()
+        assert self._polled is not None  # async_setup() builds it
+        raw: dict[str, dict[int, int | bool]] = {}
+        for name in ("identity", *self._polled):
+            component: SwattenComponent = getattr(self, name)
+            for space, values in (await component.async_read_raw()).items():
+                raw.setdefault(space, {}).update(values)
+        return {space: dict(sorted(values.items())) for space, values in raw.items()}
+
     async def _async_probe_power_factor(self) -> PowerFactor | None:
         """Read holding 4085 once; ``None`` if the device does not serve it.
 

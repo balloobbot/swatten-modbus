@@ -69,6 +69,20 @@ Sub-systems: `identity`, `clock`, `solar`, `grid`, `phases_component`,
 `power_factor`, `battery`, `energy`. Each is a `Component` that can also be
 refreshed on its own. `await inverter.clock.async_sync()` sets the device clock.
 
+### Raw register dump
+
+`async_read_raw()` reads every register the device reads and returns it
+undecoded, keyed by address space and address — the payload a bug report wants.
+It covers the setup-only identity registers as well as the polled sub-systems,
+and leaves out what this unit does not serve: the power factor where it refused
+holding 4085, and the phase registers its model does not have.
+
+```python
+raw = await inverter.async_read_raw()
+raw["input"]  # {address: value} — almost everything is FC04
+raw["holding"]  # the power factor, when this unit serves it
+```
+
 **ASCII-over-TCP is not supported, under any circumstance.** This library never
 builds a connection — you hand it a `ModbusUnit`, so framing is entirely your
 choice — but it offers no connect helper that could take or forward
