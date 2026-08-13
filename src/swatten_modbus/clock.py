@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from modbus_connection.model import Component, integer
+from modbus_connection.model import integer
+
+from .component import SwattenComponent
 
 RTC_ADDRESS = 4050
 """Year, month, day, hour, minute, second — one register each, in that order."""
 
 
-class Clock(Component):
+class Clock(SwattenComponent):
     """The real-time clock: read from input registers, set through holding.
 
     The clock reads back from the input space but is set by writing the same

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from modbus_connection.model import Component, string
+from modbus_connection.model import string
+
+from .component import SwattenComponent
 
 
-class Identity(Component):
+class Identity(SwattenComponent):
     """The model type, read once at setup and never polled.
 
     The upstream integration reads the same eight input registers both as the

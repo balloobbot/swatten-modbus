@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from modbus_connection.model import Component, gauge, integer
+from modbus_connection.model import gauge, integer
+
+from .component import SwattenComponent
 
 
-class Battery(Component):
+class Battery(SwattenComponent):
     """Battery voltage, current, power and state."""
 
     register_space = "input"

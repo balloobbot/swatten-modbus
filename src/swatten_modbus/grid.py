@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from modbus_connection.model import Component, gauge, integer, uint32
+from modbus_connection.model import gauge, integer, uint32
+
+from .component import SwattenComponent
 
 
-class Grid(Component):
+class Grid(SwattenComponent):
     """Grid quantities every SiH model reports, whatever its phase count."""
 
     register_space = "input"
@@ -17,7 +19,7 @@ class Grid(Component):
     """Power at the meter: negative is import, positive is export."""
 
 
-class GridSinglePhase(Component):
+class GridSinglePhase(SwattenComponent):
     """The single-phase (X1) grid connection: SiH3/4/5/6KSH."""
 
     register_space = "input"
@@ -26,7 +28,7 @@ class GridSinglePhase(Component):
     grid_current = gauge(4072, 0.1, signed=False, unit="A")
 
 
-class GridThreePhase(Component):
+class GridThreePhase(SwattenComponent):
     """The three-phase (X3) grid connection: SiH5/6/8/10KTH.
 
     L1 shares its two registers with the single-phase model's grid voltage and
@@ -43,7 +45,7 @@ class GridThreePhase(Component):
     grid_current_l3 = gauge(4074, 0.1, signed=False, unit="A")
 
 
-class PowerFactor(Component):
+class PowerFactor(SwattenComponent):
     """Power factor — the one register upstream reads from the holding space.
 
     Every other grid quantity is an input register; upstream leaves this one
@@ -58,7 +60,7 @@ class PowerFactor(Component):
     power_factor = integer(4085)
 
 
-class Gen2Grid(Component):
+class Gen2Grid(SwattenComponent):
     """Apparent power, which upstream declares for the GEN2 generation only.
 
     No model string the upstream plugin recognises resolves to GEN2, so this is

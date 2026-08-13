@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from modbus_connection.model import Component, gauge, uint32
+from modbus_connection.model import gauge, uint32
+
+from .component import SwattenComponent
 
 
-class Solar(Component):
+class Solar(SwattenComponent):
     """PV string voltages and currents, and total PV power."""
 
     register_space = "input"
