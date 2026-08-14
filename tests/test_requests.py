@@ -8,6 +8,8 @@ Each block therefore covers a run of fields and the small gaps between them.
 
 from __future__ import annotations
 
+from functools import partial
+
 from modbus_connection import IllegalDataAddressError
 from modbus_connection.mock import MockModbusUnit
 from modbus_connection.model import Component
@@ -143,6 +145,23 @@ async def test_read_raw_covers_the_setup_only_identity(
     assert raw["input"][4073] == 81  # phases: polled
     assert raw["holding"][4085] == u16(-950)  # power factor: polled
     assert list(raw["input"]) == sorted(raw["input"])
+
+
+async def test_read_raw_refreshes_without_notifying(
+    inverter: SwattenInverter, seeded_unit: MockModbusUnit
+) -> None:
+    """A download is not a poll: the fields refresh, but no listener fires."""
+    await inverter.async_update()
+    fired: list[str] = []
+    for name in ("identity", *(inverter._polled or ())):
+        component: Component = getattr(inverter, name)
+        component.add_update_listener(partial(fired.append, name))
+
+    seeded_unit.input[10023] = 42
+    await inverter.async_read_raw()
+
+    assert fired == []
+    assert inverter.battery.battery_soc == 42
 
 
 async def test_read_raw_leaves_out_a_power_factor_the_unit_refuses(

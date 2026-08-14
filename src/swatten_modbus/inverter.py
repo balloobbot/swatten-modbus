@@ -129,6 +129,8 @@ class SwattenInverter:
         read for. A power factor this unit refused at setup stays out, the same
         as it does in a poll. The first call sets the device up. A block the
         device refuses raises, since there the error is the point.
+
+        The fields refresh, but no listener fires: a download is not a poll.
         """
         if self._polled is None:
             await self.async_setup()
@@ -136,7 +138,7 @@ class SwattenInverter:
         raw: dict[str, dict[int, int | bool]] = {}
         for name in ("identity", *self._polled):
             component: SwattenComponent = getattr(self, name)
-            for space, values in (await component.async_read_raw()).items():
+            for space, values in (await component.async_read_raw(notify=False)).items():
                 raw.setdefault(space, {}).update(values)
         return {space: dict(sorted(values.items())) for space, values in raw.items()}
 
