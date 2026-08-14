@@ -57,7 +57,10 @@ blocks: one slow or refused block does not take the rest of the poll with it.
 `async_update()` returns an `UpdateReport` — a failed sub-system keeps its
 previous values, does not notify its listeners, and is listed by attribute name
 with its error, while every other one refreshes and notifies once the whole
-poll is done. Only a dead link (`ModbusConnectionError`) raises:
+poll is done. A dead link (`ModbusConnectionError`) raises, and so does a
+`ModbusTimeoutError` on the first sub-system tried — nothing answered at all,
+so the device is asleep or gone and walking the rest would only pay a timeout
+each:
 
 ```python
 report = await inverter.async_update()

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 from modbus_connection import (
+    IllegalDataAddressError,
     IllegalFunctionError,
     ModbusConnectionError,
     ModbusTimeoutError,
@@ -102,6 +103,40 @@ async def test_a_dead_link_raises_instead_of_reporting(
     seeded_unit.fail_requests(ModbusConnectionError("link down"))
     with pytest.raises(ModbusConnectionError):
         await inverter.async_update()
+
+
+async def test_a_silent_device_raises_instead_of_walking_every_component(
+    inverter: SwattenInverter, seeded_unit: MockModbusUnit
+) -> None:
+    """An inverter asleep behind a bridge that keeps the socket open.
+
+    Nothing answers, so every component would pay its own timeout. The first
+    one is the probe: it raises, and the poll costs one timeout, not seven.
+    """
+    await inverter.async_update()
+    seeded_unit.fail_requests(ModbusTimeoutError("asleep at dusk"))
+    seeded_unit.read_events.clear()
+
+    with pytest.raises(ModbusTimeoutError):
+        await inverter.async_update()
+
+    assert len(seeded_unit.read_events) == 1
+
+
+async def test_a_refusal_answers_for_the_device_so_a_timeout_stays_contained(
+    inverter: SwattenInverter, seeded_unit: MockModbusUnit
+) -> None:
+    """An exception response proves the device is there, the same as a refresh."""
+    await inverter.async_update()
+    seeded_unit.fail_read(4050, IllegalDataAddressError(), register_type="input")
+    seeded_unit.fail_read(
+        4061, ModbusTimeoutError("slow strings"), register_type="input"
+    )
+
+    report = await inverter.async_update()
+
+    assert set(report.failed) == {"clock", "solar"}
+    assert report.updated == POLLED - {"clock", "solar"}
 
 
 async def test_every_component_refreshes_on_a_healthy_device(

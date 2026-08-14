@@ -20,7 +20,8 @@ class UpdateReport:
 
     A failed component kept its previous values and did not notify; the error
     that failed it rides along. A dead link is never in here — the update
-    raises ``ModbusConnectionError`` instead of reporting partial silence.
+    raises ``ModbusConnectionError`` instead of reporting partial silence, and
+    nor is a timeout that hit before anything at all had answered.
     """
 
     updated: set[str]
