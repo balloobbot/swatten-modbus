@@ -93,6 +93,19 @@ choice — but it offers no connect helper that could take or forward
 this register map was extracted for and is not supported. Use `framer="socket"`
 (the modbus-connection default) or `framer="rtu"`.
 
+## Checking a real inverter
+
+`script/query.py` reads one inverter once and prints everything it has, which is
+the quickest way to see whether a unit is wired and addressed correctly:
+
+```bash
+uv run script/query.py /dev/ttyUSB0 --transport serial --unit 1
+uv run script/query.py 192.168.1.50 --unit 1
+```
+
+It prints the read count as well, and skips the sub-systems this model does not
+have — the phase block it lacks, and a power factor it refused at setup.
+
 ## Where the register map comes from
 
 The register map is based on the `plugin_swatten.py` plugin of
