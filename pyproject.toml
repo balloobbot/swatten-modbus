@@ -18,7 +18,7 @@ classifiers = [
 # Protocol + the device-modelling framework (modbus_connection.model). The caller
 # injects a ModbusUnit built from whichever backend they choose; tmodbus is the
 # backend modbus-connection's own suite runs against.
-dependencies = ["modbus-connection[tmodbus]>=4.7.0"]
+dependencies = ["modbus-connection[tmodbus]>=4.8.1"]
 
 [project.urls]
 Homepage = "https://github.com/balloobbot/swatten-modbus"
